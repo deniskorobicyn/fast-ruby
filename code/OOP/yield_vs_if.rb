@@ -1,4 +1,8 @@
+# Check code idea represended by Sandi Metz
+# https://www.youtube.com/watch?t=46&v=ByURd1SY9dI
+
 require 'benchmark/ips'
+
 class Object
   def if_true
     yield
@@ -21,8 +25,6 @@ class NilClass
   end
 end
 
-# https://www.youtube.com/watch?t=46&v=ByURd1SY9dI
-
 class FalseClass
   def if_true
     self
@@ -34,18 +36,10 @@ class FalseClass
   end
 end
 
-ARRAY = (1..100).to_a.reverse
-
-def slow
-  ARRAY.each do |elem|
-    (elem % 2 == 0).
-      if_true{ 'even' }.
-      if_false{ 'odd' }
-  end
-end
+ARRAY = (1..100).to_a
 
 def fast
-  ARRAY.each do |elem|
+  ARRAY.map do |elem|
     if elem % 2 == 0
       'even'
     else
@@ -54,8 +48,16 @@ def fast
   end
 end
 
+def slow
+  ARRAY.map do |elem|
+    (elem % 2 == 0).
+      if_true{ 'even' }.
+      if_false{ 'odd' }
+  end
+end
+
 Benchmark.ips do |x|
-  x.report('fast code description') { fast }
-  x.report('slow code description') { slow }
+  x.report('simple if') { fast }
+  x.report('OOP style') { slow }
   x.compare!
 end
