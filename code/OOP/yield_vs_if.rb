@@ -21,6 +21,8 @@ class NilClass
   end
 end
 
+# https://www.youtube.com/watch?t=46&v=ByURd1SY9dI
+
 class FalseClass
   def if_true
     self
