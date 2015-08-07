@@ -24,4 +24,3 @@ Benchmark.ips do |x|
   x.report("Math#case") { slow }
   x.compare!
 end
-
