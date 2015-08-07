@@ -11,6 +11,11 @@ You can checkout [the travis build](https://travis-ci.org/JuanitoFatas/fast-ruby
 
 **Let's write faster code, together! <3**
 
+Analyze your code
+-----------------
+
+Checkout the [fasterer](https://github.com/DamirSvrtan/fasterer) project - it's a static analysis that checks speed idioms written in this repo.
+
 Measurement Tool
 -----------------
 
@@ -19,7 +24,7 @@ Use [benchmark-ips](https://github.com/evanphx/benchmark-ips) (2.0+).
 ### Template
 
 ```ruby
-require 'benchmark/ips'
+require "benchmark/ips"
 
 def fast
 end
@@ -28,8 +33,8 @@ def slow
 end
 
 Benchmark.ips do |x|
-  x.report('fast code description') { fast }
-  x.report('slow code description') { slow }
+  x.report("fast code description") { fast }
+  x.report("slow code description") { slow }
   x.compare!
 end
 ```
@@ -41,22 +46,24 @@ Idioms
 
 ##### Parallel Assignment vs Sequential Assignment [code](code/general/assignment.rb)
 
-> Parallel Assignment allocates an extra array.
+[Read the rationale here](https://github.com/JuanitoFatas/fast-ruby/pull/50#issue-98586885).
 
 ```
 $ ruby -v code/general/assignment.rb
-ruby 2.2.0p0 (2014-12-25 revision 49005) [x86_64-darwin14]
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
 
 Calculating -------------------------------------
- Parallel Assignment     99.146k i/100ms
-Sequential Assignment   127.143k i/100ms
+ Parallel Assignment   149.201k i/100ms
+Sequential Assignment
+                       142.545k i/100ms
 -------------------------------------------------
- Parallel Assignment      2.522M (± 7.5%) i/s -     12.592M
-Sequential Assignment     5.686M (± 8.6%) i/s -     28.226M
+ Parallel Assignment      7.687M (± 6.9%) i/s -     38.345M
+Sequential Assignment
+                          6.320M (± 8.5%) i/s -     31.360M
 
 Comparison:
-Sequential Assignment:  5685750.0 i/s
- Parallel Assignment:   2521708.9 i/s - 2.25x slower
+ Parallel Assignment:  7686954.1 i/s
+Sequential Assignment:  6320425.6 i/s - 1.22x slower
 ```
 
 ##### `begin...rescue` vs `respond_to?` for Control Flow [code](code/general/begin-rescue-vs-respond-to.rb)
@@ -95,6 +102,47 @@ Comparison:
 module_eval with string:     1129.7 i/s - 1.19x slower
 ```
 
+#### Method Invocation
+
+##### `call` vs `send` vs `method_missing` [code](code/method/call-vs-send-vs-method_missing.rb)
+
+```
+$ ruby -v code/method/call-vs-send-vs-method_missing.rb
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
+
+Calculating -------------------------------------
+                call   115.094k i/100ms
+                send   105.258k i/100ms
+      method_missing   100.762k i/100ms
+-------------------------------------------------
+                call      3.811M (± 5.9%) i/s -     18.991M
+                send      3.244M (± 7.2%) i/s -     16.210M
+      method_missing      2.729M (± 9.8%) i/s -     13.401M
+
+Comparison:
+                call:  3811183.4 i/s
+                send:  3244239.1 i/s - 1.17x slower
+      method_missing:  2728893.0 i/s - 1.40x slower
+```
+
+##### Normal way to apply method vs `&method(...)` [code](code/general/block-apply-method.rb)
+
+```
+$ ruby -v code/general/block-apply-method.rb
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
+
+Calculating -------------------------------------
+              normal    85.749k i/100ms
+             &method    35.529k i/100ms
+-------------------------------------------------
+              normal      1.867M (± 7.6%) i/s -      9.347M
+             &method    467.095k (± 6.4%) i/s -      2.345M
+
+Comparison:
+              normal:  1866669.5 i/s
+             &method:   467095.4 i/s - 4.00x slower
+```
+
 ### Array
 
 ##### `Array#bsearch` vs `Array#find` [code](code/array/bsearch-vs-find.rb)
@@ -117,22 +165,27 @@ Comparison:
                 find:        0.2 i/s - 3137489.63x slower
 ```
 
-##### `Array#count` vs `Array#size` [code](code/array/count-vs-size.rb)
+##### `Array#length` vs `Array#size` vs `Array#count` [code](code/array/length-vs-size-vs-count.rb)
+
+Use `#length` when you only want to know how many elements in the array, `#count` could also archieve this. However `#count` should be use for counting specific elements in array. [Note `#size` is an alias of `#length`](https://github.com/ruby/ruby/blob/f8fb526ad9e9f31453bffbc908b6a986736e21a7/array.c#L5817-L5818).
 
 ```
-$ ruby -v code/array/count-vs-size.rb
-ruby 2.2.0p0 (2014-12-25 revision 49005) [x86_64-darwin14]
+$ ruby -v code/array/length-vs-size-vs-count.rb
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
 
 Calculating -------------------------------------
-              #count   130.991k i/100ms
-               #size   135.312k i/100ms
+        Array#length   172.998k i/100ms
+          Array#size   168.130k i/100ms
+         Array#count   164.911k i/100ms
 -------------------------------------------------
-              #count      6.697M (± 7.1%) i/s -     33.403M
-               #size      7.562M (± 9.1%) i/s -     37.481M
+        Array#length     11.394M (± 6.1%) i/s -     56.743M
+          Array#size     11.303M (± 6.5%) i/s -     56.324M
+         Array#count      9.195M (± 8.6%) i/s -     45.680M
 
 Comparison:
-               #size:  7562457.4 i/s
-              #count:  6696763.0 i/s - 1.13x slower
+        Array#length: 11394036.7 i/s
+          Array#size: 11302701.1 i/s - 1.01x slower
+         Array#count:  9194976.2 i/s - 1.24x slower
 ```
 
 ##### `Array#shuffle.first` vs `Array#sample` [code](code/array/shuffle-first-vs-sample.rb)
@@ -158,7 +211,7 @@ Comparison:
  Array#shuffle.first:   304341.1 i/s - 18.82x slower
 ```
 
-##### `Array#[](0)` vs `Array#first` [code](code/array/array_first-vs-index.rb)
+##### `Array#[](0)` vs `Array#first` [code](code/array/array-first-vs-index.rb)
 
 ```
 $ ruby -v code/array/array-first-vs-index.rb
@@ -176,7 +229,7 @@ Comparison:
          Array#first:  7464526.6 i/s - 1.15x slower
 ```
 
-##### `Array#[](-1)` vs `Array#last` [code](code/array/array_last-vs-index.rb)
+##### `Array#[](-1)` vs `Array#last` [code](code/array/array-last-vs-index.rb)
 
 ```
 $ ruby -v code/array/array-last-vs-index.rb
@@ -354,6 +407,33 @@ Comparison:
 
 
 ### Hash
+
+##### `Hash#[]` vs `Hash.fetch` [code](code/hash/bracket-vs-fetch.rb)
+
+If you use Ruby 2.2, `Symbol` could be more performant than `String` as `Hash` keys.
+Read more regarding this: [Symbol GC in Ruby 2.2](http://www.sitepoint.com/symbol-gc-ruby-2-2/) and [Unraveling String Key Performance in Ruby 2.2](http://www.sitepoint.com/unraveling-string-key-performance-ruby-2-2/).
+
+```
+$ ruby -v code/hash/bracket-vs-fetch.rb
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
+
+Calculating -------------------------------------
+     Hash#[], symbol   143.850k i/100ms
+  Hash#fetch, symbol   137.425k i/100ms
+     Hash#[], string   143.083k i/100ms
+  Hash#fetch, string   120.417k i/100ms
+-------------------------------------------------
+     Hash#[], symbol      7.531M (± 6.6%) i/s -     37.545M
+  Hash#fetch, symbol      6.644M (± 8.2%) i/s -     32.982M
+     Hash#[], string      6.657M (± 7.7%) i/s -     33.195M
+  Hash#fetch, string      3.981M (± 8.7%) i/s -     19.748M
+
+Comparison:
+     Hash#[], symbol:  7531355.8 i/s
+     Hash#[], string:  6656818.8 i/s - 1.13x slower
+  Hash#fetch, symbol:  6643665.5 i/s - 1.13x slower
+  Hash#fetch, string:  3981166.5 i/s - 1.89x slower
+```
 
 ##### `Hash#[]` vs `Hash#dup` [code](code/hash/bracket-vs-dup.rb)
 
@@ -607,6 +687,29 @@ Comparison:
            String#=~:   854830.3 i/s - 3.32x slower
 ```
 
+##### `String#match` vs `String#=~` [code ](code/string/match-vs-=~.rb)
+
+> :warning: <br>
+> Sometimes you cant replace `match` with `=~`, <br />
+> This is only useful for cases where you are checkin <br />
+> for a match and not using the resultant match object.
+
+```
+$ ruby -v code/string/match-vs-=~.rb
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
+Calculating -------------------------------------
+           String#=~    69.889k i/100ms
+        String#match    66.715k i/100ms
+-------------------------------------------------
+           String#=~      1.854M (±12.2%) i/s -      9.155M
+        String#match      1.594M (±11.0%) i/s -      7.939M
+
+Comparison:
+           String#=~:  1853861.7 i/s
+        String#match:  1593971.6 i/s - 1.16x slower
+```
+
+
 ##### `String#gsub` vs `String#sub` [code](code/string/gsub-vs-sub.rb)
 
 ```
@@ -645,6 +748,38 @@ Comparison:
          String#gsub:   516604.2 i/s - 3.60x slower
 ```
 
+##### `String#sub!` vs `String#gsub!` vs `String#[]=` [code](code/string/sub!-vs-gsub!-vs-[]=.rb)
+
+Note that `String#[]` will throw an `IndexError` when given string or regexp not matched.
+
+```
+$ ruby -v code/string/sub\!-vs-gsub\!-vs-\[\]\=.rb
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
+
+Calculating -------------------------------------
+  String#['string']=    74.512k i/100ms
+ String#sub!'string'    52.801k i/100ms
+String#gsub!'string'    34.480k i/100ms
+  String#[/regexp/]=    55.325k i/100ms
+ String#sub!/regexp/    45.770k i/100ms
+String#gsub!/regexp/    27.665k i/100ms
+-------------------------------------------------
+  String#['string']=      1.215M (± 6.2%) i/s -      6.110M
+ String#sub!'string'    752.731k (± 6.2%) i/s -      3.749M
+String#gsub!'string'    481.183k (± 4.4%) i/s -      2.414M
+  String#[/regexp/]=    840.615k (± 5.3%) i/s -      4.205M
+ String#sub!/regexp/    663.075k (± 7.8%) i/s -      3.295M
+String#gsub!/regexp/    342.004k (± 7.5%) i/s -      1.715M
+
+Comparison:
+  String#['string']=:  1214845.5 i/s
+  String#[/regexp/]=:   840615.2 i/s - 1.45x slower
+ String#sub!'string':   752731.4 i/s - 1.61x slower
+ String#sub!/regexp/:   663075.3 i/s - 1.83x slower
+String#gsub!'string':   481183.5 i/s - 2.52x slower
+String#gsub!/regexp/:   342003.8 i/s - 3.55x slower
+```
+
 ##### `attr_accessor` vs `getter and setter` [code](code/general/attr-accessor-vs-getter-and-setter.rb)
 
 > https://www.omniref.com/ruby/2.2.0/files/method.h?#annotation=4081781&line=47
@@ -665,9 +800,32 @@ Comparison:
 ```
 
 
+### Range
+
+#### `cover?` vs `include?` [code](code/range/cover-vs-include.rb)
+
+`cover?` only check if it is within the start and end, `include?` needs to traverse the whole range.
+
+```
+$ ruby -v code/range/cover-vs-include.rb
+ruby 2.2.2p95 (2015-04-13 revision 50295) [x86_64-darwin14]
+
+Calculating -------------------------------------
+        Range#cover?    95.445k i/100ms
+      Range#include?     9.326k i/100ms
+-------------------------------------------------
+        Range#cover?      2.327M (± 4.7%) i/s -     11.644M
+      Range#include?     99.652k (± 5.4%) i/s -    503.604k
+
+Comparison:
+        Range#cover?:  2327220.4 i/s
+      Range#include?:    99651.6 i/s - 23.35x slower
+```
+
+
 ## Less idiomatic but with significant performance ruby
 
-Checkout: https://github.com/JuanitoFatas/fast-ruby/wiki/Less-idiomatic-but-with-significant-performance-diffrence
+Checkout: https://github.com/JuanitoFatas/fast-ruby/wiki/Less-idiomatic-but-with-significant-performance-difference
 
 
 ## Submit New Entry
