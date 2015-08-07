@@ -2,6 +2,7 @@
 # https://www.youtube.com/watch?t=46&v=ByURd1SY9dI
 
 require 'benchmark/ips'
+require 'activesupport/'
 
 class Object
   def if_true
