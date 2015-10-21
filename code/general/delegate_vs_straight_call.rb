@@ -1,10 +1,16 @@
 require 'benchmark/ips'
 require 'active_support/core_ext/module/delegation'
 
+class A
+  def test
+  end
+end
 
 def fast
-  eval <<BLOCK
-    class Test
+  eval "
+    class TestStraight
+      attr_reader :a
+
       def initialize(a)
         @a = a
       end
@@ -13,25 +19,31 @@ def fast
         a.test
       end
     end
-  BLOCK
+
+    a = A.new
+    TestStraight.new(a).test
+  "
 end
 
 def slow
-  eval <<BLOCK
-  class Test
-    attr_reader :a
+  eval "
+    class TestDelegate
+      attr_reader :a
 
-    def initialize(a)
-      @a = a
+      def initialize(a)
+        @a = a
+      end
+
+      delegate :test, to: :a
     end
 
-    delegate :test, to: a
-  end
-  BLOCK
+    a = A.new
+    TestDelegate.new(a).test
+  "
 end
 
 Benchmark.ips do |x|
-  x.report('straight_call') { slow }
-  x.report('delegate')      { fast }
+  x.report('straight_call') { fast }
+  x.report('delegate')      { slow }
   x.compare!
 end

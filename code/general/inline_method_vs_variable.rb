@@ -1,17 +1,18 @@
 require 'benchmark/ips'
 
+
 def fast
   a = 0
 
   a
 end
 
-def slow
-  def a
-    0
-  end
+def some_method
+  0
+end
 
-  a
+def slow
+  some_method
 end
 
 Benchmark.ips do |x|
